@@ -22,27 +22,62 @@ from data_processing import load_train_data, load_tr_te_data, load_user_items, l
 from data_processing import load_item_one_hot_features as load_item_features
 
 
+from sample import sample_from_generator_new
 
 
-def train_GAN():
-	
+def train_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BATCH_SIZE, DISPLAY_ITER, LEARNING_RATE, GENERATOR_SAMPLE_TH, total_anneal_steps, anneal_cap, to_restore, model_name, dataset):
+
+
+	DATA_DIR = '../Dataset/'+dataset+'/'
+
+	show2id_path = DATA_DIR + "show2id.txt"
+	niche_tags_path = DATA_DIR + "niche_tags.txt"
+
+	user_tag_matrix_path = DATA_DIR + "tag_counts.csv"
+
+	output_path = "chkpt/"+dataset+"_"+model_name+"_"+str(GANLAMBDA)+"/"
+
+	if not os.path.exists(output_path):
+		os.makedirs(output_path)
+
+
+	item_list_path = DATA_DIR + 'parsed_tag_features.txt'
+
+	pro_dir = DATA_DIR # os.path.join(DATA_DIR, 'pro_sg_tags_1k')
+
+
+	unique_sid = list()
+	with open(os.path.join(pro_dir, 'unique_sid.txt'), 'r') as f:
+		for line in f:
+			unique_sid.append(line.strip())
+
+	n_items = len(unique_sid)
+
+	p_dims = [200, 600, n_items]
+
+
+
+	print('Loading Items...', end = '')
+	SHOW2ID, IDs_present, NICHE_TAGS, ALL_TAGS, OTHER_TAGS = load_pop_niche_tags(show2id_path, item_list_path, niche_tags_path, n_items)
+	print('Done.')
+
 
 	# One Hot Vectors for Items
 	print('Loading Item Features...', end = '')
-	ITEM_FEATURE_DICT, FEATURE_LEN, ITEM_FEATURE_ARR = load_item_features()
+	ITEM_FEATURE_DICT, FEATURE_LEN, ITEM_FEATURE_ARR = load_item_features(item_list_path, SHOW2ID, n_items)
 	print('Done.')
 
 
 	# Load Binary Interaction Matrix X
 	print('Loading Training Interaction Matrix...', end = '')
-	train_data, uid_start_idx = load_train_data(os.path.join(pro_dir, 'train_GAN.csv'))
+	train_data, uid_start_idx = load_train_data(os.path.join(pro_dir, 'train_GAN.csv'), n_items)
 	print('Done.')
 	
 
 	# Load Data for Validation
 	print('Loading Validation Matrix...', end = '')
 	vad_data_tr, vad_data_te, uid_start_idx_vad = load_tr_te_data(os.path.join(pro_dir, 'validation_tr.csv'),
-											   os.path.join(pro_dir, 'validation_te.csv'))
+											   os.path.join(pro_dir, 'validation_te.csv'), n_items)
 	print('Done.')
 
 
@@ -55,8 +90,8 @@ def train_GAN():
 
 
 
-	print('Loading item overlap coefficients....')
-	OVERLAP_COEFFS = load_overlap_coeff()
+	print('Loading item overlap coefficients....', end = '')
+	OVERLAP_COEFFS = load_overlap_coeff(show2id_path, user_tag_matrix_path)
 	print('Done.')
 
 
@@ -114,69 +149,61 @@ def train_GAN():
 
 
 	
-	print('User tags to sample being computed')
+	print('Loading Items to Sample....', end = '')
 	USER_TAGS_TO_SAMPLE = {}
 
-	# for user_idx in range(N):
-	# 	if user_idx not in user_popular_data or user_idx not in user_niche_data:
-	# 		continue
+	for user_idx in range(N):
+		if user_idx not in user_popular_data or user_idx not in user_niche_data:
+			continue
 
-	# 	curr_pop_vectors = user_popular_data[user_idx]
-	# 	curr_niche_vectors = user_niche_data[user_idx]
+		curr_pop_vectors = user_popular_data[user_idx]
+		curr_niche_vectors = user_niche_data[user_idx]
 
-	# 	num_niche_tags = len(curr_niche_vectors)
+		num_niche_tags = len(curr_niche_vectors)
 
-	# 	num_sample_tags = max(2 * len(curr_niche_vectors), 10 - num_niche_tags)
+		num_sample_tags = max(2 * len(curr_niche_vectors), 10 - num_niche_tags)
 
-	# 	curr_niche_tags = set()
+		curr_niche_tags = set()
 
-	# 	curr_sampling_tags = []
+		curr_sampling_tags = []
 
-	# 	for niche_tag in curr_niche_vectors:
-	# 		niche_tag_idx = niche_tag
-	# 		curr_niche_tags.add(niche_tag_idx)
-	# 		curr_sampling_tags.append(int(niche_tag_idx))
+		for niche_tag in curr_niche_vectors:
+			niche_tag_idx = niche_tag
+			curr_niche_tags.add(niche_tag_idx)
+			curr_sampling_tags.append(int(niche_tag_idx))
 
-	# 	other_niche_tags = list(NICHE_TAGS - curr_niche_tags)
+		other_niche_tags = list(NICHE_TAGS - curr_niche_tags)
 
-	# 	# shuffle(othe)
+		other_tags_corr = {}
 
-	# 	other_tags_corr = {}
+		for inner_idx in range(len(other_niche_tags)):
 
-	# 	for inner_idx in range(len(other_niche_tags)):
+			other_tag_idx = other_niche_tags[inner_idx]
 
-	# 		other_tag_idx = other_niche_tags[inner_idx]
+			max_coeff = -1.0
 
-	# 		max_coeff = -1.0
+			for niche_tag in curr_niche_vectors:
+				niche_tag_idx = niche_tag
 
-	# 		for niche_tag in curr_niche_vectors:
-	# 			niche_tag_idx = niche_tag
+				curr_coeff = OVERLAP_COEFFS[niche_tag_idx][other_tag_idx]
 
-	# 			curr_coeff = OVERLAP_COEFFS[niche_tag_idx][other_tag_idx]
+				if curr_coeff > max_coeff:
+					max_coeff = curr_coeff
 
-	# 			if curr_coeff > max_coeff:
-	# 				max_coeff = curr_coeff
-
-	# 		other_tags_corr[other_tag_idx] = max_coeff
+			other_tags_corr[other_tag_idx] = max_coeff
 
 
-	# 	sorted_other_tags = sorted(other_tags_corr.items(), key = lambda x: x[1] , reverse = True)
+		sorted_other_tags = sorted(other_tags_corr.items(), key = lambda x: x[1] , reverse = True)
 
-	# 	for inner_idx in range(min(num_sample_tags, len(sorted_other_tags))):
-	# 		curr_sampling_tags.append(sorted_other_tags[inner_idx][0])
+		for inner_idx in range(min(num_sample_tags, len(sorted_other_tags))):
+			curr_sampling_tags.append(sorted_other_tags[inner_idx][0])
 
 
-	# 	curr_sampling_tags.sort()
+		curr_sampling_tags.sort()
 
-	# 	# print(curr_sampling_tags)
+		USER_TAGS_TO_SAMPLE[user_idx] = np.asarray(curr_sampling_tags)
 
-	# 	USER_TAGS_TO_SAMPLE[user_idx] = np.asarray(curr_sampling_tags)
-
-	# 	# print(curr_sampling_tags, len(curr_niche_vectors), len(curr_sampling_tags))
-	# print("User tags to sample done")
-	# pickle.dump(USER_TAGS_TO_SAMPLE, open(pro_dir+'/USER_TAGS_TO_SAMPLE.pkl', 'wb'))
-	USER_TAGS_TO_SAMPLE = pickle.load(open(pro_dir+'/USER_TAGS_TO_SAMPLE.pkl', 'rb'))
-
+	print("Done")
 
 	N_vad = vad_data_tr.shape[0]
 	idxlist_vad = range(N_vad)
@@ -202,7 +229,6 @@ def train_GAN():
 	generated_tags = tf.placeholder(tf.float32, [None, n_items], name = "generated_tags")
 
 	
-
 	# Discriminator
 	x_generated_id = tf.placeholder(tf.int32, [None], name = "x_generated")
 	x_popular_n_id = tf.placeholder(tf.int32, [None], name="x_popular_n")
@@ -260,9 +286,10 @@ def train_GAN():
 	zero = tf.constant(0, dtype=tf.float32)
 
 
+	# Loss Function
+
 	d_loss = - tf.reduce_sum(tf.log(y_data)) - tf.reduce_sum(tf.log(1 - y_generated))
 	d_loss_mean = tf.reduce_mean(d_loss)
-	# g_loss = -tf.reduce_mean(tf.log(self.prob) *self.reward)
 
 	sampled_generator_out = tf.multiply(generator_out, generated_tags)
 
@@ -309,7 +336,7 @@ def train_GAN():
 		batch_X = []
 		batch_total_sampled_cnt = []
 
-		# train for one epoch
+		# train for each epoch
 		user_err_cnt = 0
 		for bnum, st_idx in enumerate(range(0, N, BATCH_SIZE)):
 			end_idx = min(st_idx + BATCH_SIZE, N)
@@ -364,15 +391,6 @@ def train_GAN():
 					max_pop_tag_idx = np.random.choice(range(len(curr_pop_vectors)))
 
 					max_pop_tag_idx = curr_pop_vectors[max_pop_tag_idx]
-
-					# for pop_tag in curr_pop_vectors:
-					# 	pop_tag_idx = pop_tag[0]
-
-					# 	curr_coeff = OVERLAP_COEFFS[generated_tag_idx][pop_tag_idx]
-
-					# 	if curr_coeff > max_coeff:
-					# 		max_coeff = curr_coeff
-					# 		max_pop_tag_idx = pop_tag_idx
 
 					if generated_tag_idx not in ITEM_FEATURE_DICT or max_pop_tag_idx not in ITEM_FEATURE_DICT:
 						# print('Invalid Generated Tag Pair:', generated_tag_idx, max_pop_tag_idx)
@@ -434,31 +452,6 @@ def train_GAN():
 				total_sampled_cnt = batch_total_sampled_cnt[disc_batch_idx]
 
 
-				# curr_x_popular_n = []
-				# curr_x_niche = []
-
-				# for tag_idx,jjj in enumerate(curr_x_popular_id_n):
-				# 	curr_x_niche.append(ITEM_FEATURE_DICT[curr_x_niche_id[tag_idx]])
-				# 	curr_x_popular_n.append(ITEM_FEATURE_DICT[curr_x_popular_id_n[tag_idx]])
-
-
-				# curr_x_popular_n = np.asarray(curr_x_popular_n)
-				# curr_x_niche = np.asarray(curr_x_niche)
-
-
-				# curr_x_popular_g = []
-				# curr_x_generated = []
-
-				# for tag_idx,jjj in enumerate(curr_x_popular_id_g):
-				# 	curr_x_generated.append(ITEM_FEATURE_DICT[curr_x_generated_id[tag_idx]])
-				# 	curr_x_popular_g.append(ITEM_FEATURE_DICT[curr_x_popular_id_g[tag_idx]])
-
-
-				# curr_x_popular_g = np.asarray(curr_x_popular_g)
-				# curr_x_generated = np.asarray(curr_x_generated)
-
-
-
 				_, curr_d_loss = sess.run([d_trainer, d_loss_mean], feed_dict={generator_network.input_ph: X, x_popular_n_id: curr_x_popular_id_n, x_popular_g_id: curr_x_popular_id_g , x_niche_id: curr_x_niche_id, x_generated_id: curr_x_generated_id, generated_tags: total_sampled_tags, sampled_cnt: total_sampled_cnt, keep_prob: np.sum(0.7).astype(np.float32), ITEM_FEATURE_ARR: ITEM_FEATURE_ARR})
 
 
@@ -478,29 +471,6 @@ def train_GAN():
 				total_sampled_cnt = batch_total_sampled_cnt[gen_batch_idx]
 
 
-				# curr_x_popular_n = []
-				# curr_x_niche = []
-
-				# for tag_idx,jjj in enumerate(curr_x_popular_id_n):
-				# 	curr_x_niche.append(ITEM_FEATURE_DICT[curr_x_niche_id[tag_idx]])
-				# 	curr_x_popular_n.append(ITEM_FEATURE_DICT[curr_x_popular_id_n[tag_idx]])
-
-
-				# curr_x_popular_n = np.asarray(curr_x_popular_n)
-				# curr_x_niche = np.asarray(curr_x_niche)
-
-
-				# curr_x_popular_g = []
-				# curr_x_generated = []
-
-				# for tag_idx,jjj in enumerate(curr_x_popular_id_g):
-				# 	curr_x_generated.append(ITEM_FEATURE_DICT[curr_x_generated_id[tag_idx]])
-				# 	curr_x_popular_g.append(ITEM_FEATURE_DICT[curr_x_popular_id_g[tag_idx]])
-
-
-				# curr_x_popular_g = np.asarray(curr_x_popular_g)
-				# curr_x_generated = np.asarray(curr_x_generated)
-
 				if total_anneal_steps > 0:
 						anneal = min(anneal_cap, 1. * ((update_count) / total_anneal_steps))
 				else:
@@ -513,70 +483,35 @@ def train_GAN():
 
 			print("global-epoch:%s, generator-epoch:%s, g_loss:%.5f (vae_loss: %.5f + gan_loss: %.5f, anneal: %.5f)" % (i, j_gen, curr_g_loss, curr_g_loss_term_1, curr_g_loss_term_2, anneal))
 
-
-			# print("g-epoch:%s, d-epoch:%s, d_loss:%.5f" % (i, j_disc, curr_d_loss))
-
-		print("")
-
-
-		X_vad = vad_data_tr[idxlist_vad[0:N_vad]]
-
-		if sparse.isspmatrix(X_vad):
-			X_vad = X_vad.toarray()
-		X_vad = X_vad.astype('float32')
-		
-		pred_vad = sess.run(generator_out, feed_dict={generator_network.input_ph: X_vad} )
-		# exclude examples from training and validation (if any)
-		pred_vad[X_vad.nonzero()] = -np.inf
-		ndcg_vad = NDCG_binary_at_k_batch(pred_vad, vad_data_te[idxlist_vad[0:N_vad]])
-		
-		recall_at_20, not_found_20 = Recall_at_k_batch(pred_vad, vad_data_te[idxlist_vad[0:N_vad]], k=20)
-
-		recall_at_50, not_found_50 = Recall_at_k_batch(pred_vad, vad_data_te[idxlist_vad[0:N_vad]], k=50)
-
-		print('global-epoch:', i , 'gen-epoch:', j_gen, 'Vad: NDCG:', np.mean(ndcg_vad), 'Recall@20:', np.mean(recall_at_20), 'Recall@50:', np.mean(recall_at_50), 'Num_users:', len(ndcg_vad), len(recall_at_20), len(recall_at_50))
-
-		X_vad_20 = vad_data_tr_20[idxlist_vad_20[0:N_vad_20]]
-
-		if sparse.isspmatrix(X_vad_20):
-			X_vad_20 = X_vad_20.toarray()
-		X_vad_20 = X_vad_20.astype('float32')
-		
-		pred_vad_20 = sess.run(generator_out, feed_dict={generator_network.input_ph: X_vad_20} )
-		# exclude examples from training and validation (if any)
-		pred_vad_20[X_vad_20.nonzero()] = -np.inf
-		ndcg_vad = NDCG_binary_at_k_batch(pred_vad_20, vad_data_te_20[idxlist_vad_20[0:N_vad_20]])
-		
-		recall_at_20, not_found_20 = Recall_at_k_batch(pred_vad_20, vad_data_te_20[idxlist_vad_20[0:N_vad_20]], k=20)
-
-		recall_at_50, not_found_50 = Recall_at_k_batch(pred_vad_20, vad_data_te_20[idxlist_vad_20[0:N_vad_20]], k=50)
-
-
-		print('global-epoch:', i , 'gen-epoch:', j_gen, 'Vad>=20: NDCG:', np.mean(ndcg_vad), 'Recall@20:', np.mean(recall_at_20), 'Recall@50:', np.mean(recall_at_50), 'Num_users:', len(ndcg_vad), len(recall_at_20), len(recall_at_50))
-
-
-		X_vad_20_50 = vad_data_tr_20_50[idxlist_vad_20_50[0:N_vad_20_50]]
-
-		if sparse.isspmatrix(X_vad_20_50):
-			X_vad_20_50 = X_vad_20_50.toarray()
-		X_vad_20_50 = X_vad_20_50.astype('float32')
-		
-		pred_vad_20_50 = sess.run(generator_out, feed_dict={generator_network.input_ph: X_vad_20_50} )
-		# exclude examples from training and validation (if any)
-		pred_vad_20_50[X_vad_20_50.nonzero()] = -np.inf
-		ndcg_vad = NDCG_binary_at_k_batch(pred_vad_20_50, vad_data_te_20_50[idxlist_vad_20_50[0:N_vad_20_50]])
-
-		recall_at_20, not_found_20 = Recall_at_k_batch(pred_vad_20_50, vad_data_te_20_50[idxlist_vad_20_50[0:N_vad_20_50]], k=20)
-
-		recall_at_50, not_found_50 = Recall_at_k_batch(pred_vad_20_50, vad_data_te_20_50[idxlist_vad_20_50[0:N_vad_20_50]], k=50)
-
-
-		print('global-epoch:', i , 'gen-epoch:', j_gen,  'Vad-20-50: NDCG:', np.mean(ndcg_vad), 'Recall@20:', np.mean(recall_at_20), 'Recall@50:', np.mean(recall_at_50), 'Num_users:', len(ndcg_vad), len(recall_at_20), len(recall_at_50))
-
-
 		print('')
 		
 		saver.save(sess, os.path.join(output_path, "model_"+str(i)))
 
 		print('Model saved at global-epoch', i)
 
+
+configParser = configparser.RawConfigParser()   
+configFilePath = r'config.ini'
+configParser.read(configFilePath)
+
+h0_size = configParser.get('Long-Tail-GAN', 'h0_size')
+h1_size = configParser.get('Long-Tail-GAN', 'h1_size')
+h2_size = configParser.get('Long-Tail-GAN', 'h2_size')
+h3_size = configParser.get('Long-Tail-GAN', 'h3_size')
+
+NUM_EPOCH = configParser.get('Long-Tail-GAN', 'NUM_EPOCH')
+NUM_SUB_EPOCHS = configParser.get('Long-Tail-GAN', 'NUM_SUB_EPOCHS')
+BATCH_SIZE = configParser.get('Long-Tail-GAN', 'BATCH_SIZE')
+
+DISPLAY_ITER = configParser.get('Long-Tail-GAN', 'DISPLAY_ITER')
+LEARNING_RATE = configParser.get('Long-Tail-GAN', 'LEARNING_RATE')
+GENERATOR_SAMPLE_TH = configParser.get('Long-Tail-GAN', 'GENERATOR_SAMPLE_TH')
+total_anneal_steps = configParser.get('Long-Tail-GAN', 'total_anneal_steps')
+anneal_cap = configParser.get('Long-Tail-GAN', 'anneal_cap')
+to_restore = configParser.get('Long-Tail-GAN', 'to_restore')
+
+model_name = configParser.get('Long-Tail-GAN', 'model_name')
+
+dataset = "Askubuntu"
+
+train_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BATCH_SIZE, DISPLAY_ITER, LEARNING_RATE, GENERATOR_SAMPLE_TH, total_anneal_steps, anneal_cap, to_restore, model_name, dataset)
