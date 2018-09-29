@@ -32,40 +32,6 @@ TODO
 ## Running the Model
 
 
-# Long-Tail-GAN
-
-The repository contains training and testing codes for an adversarial learning framework for Neural Collaborative Filtering (NCF) models which aims to enhance long-tail item recommendations. 
-
-This model was proposed in the following short paper:
-
-> Adit Krishnan, Ashish Sharma, Aravind Sankar, Hari Sundaram, "An Adversarial Approach to Tackle Long-Tail Recommendation in Neural Collaborative Filtering", 
-> 27th ACM International Conference on Information and Knowledge Management (CIKM'18)
-
-## Getting Started
-
-These instructions will get you a copy of the model up and running on your local machine.
-
-### Platforms Supported
-
-- Unix-Like
-
-### Prerequisites
-
-For using our framework you will need Python 2.7+ with the following modules installed:
-- [tensorflow](https://www.tensorflow.org/)
-- [numpy](http://www.numpy.org/)
-- [scipy](https://www.scipy.org/)
-- [pandas](https://pandas.pydata.org/)
-- [bottleneck](https://pypi.org/project/Bottleneck/)
-
-
-## Creating the Input Files
-
-TODO
-
-## Running the Model
-
-
 ### Configure
 
 The model can be configured using the file [config.ini](Codes/config.ini) present inside the [Codes](Codes/) folder. The major parameters to be configured are:
