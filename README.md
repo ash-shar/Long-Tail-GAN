@@ -41,28 +41,8 @@ GANLAMBDA:       Weight provided to the Adversary's Loss Term (Default = 1.0)
 NUM_EPOCH:       Number of Epochs for training (Default = 80)
 BATCH_SIZE:      Size of each batch (Default = 100)
 LEARNING_RATE:   Learning Rate of the Model (Default = 0.0001)
-model_name:      Name with with model is saved (Default = "LT_GAN")
+model_name:      Name by which model is saved (Default = "LT_GAN")
 ```
-
-### Train
-
-For training the model, run the following command: 
-
-```
-$ python2.7 train <path/to/input/folder>
-```
-
-By default, the model gets saved to **path/to/input/folder/chkpt** after every epoch.
-
-### Test
-
-For testing the model, run the following command:
-
-```
-$ python2.7 test.py <path/to/saved/folder>
-```
-
-The mean NDCG, and Recall are reported for the test dataset provided.
 
 ### Train
 
