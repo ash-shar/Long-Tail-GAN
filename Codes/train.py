@@ -536,7 +536,6 @@ GANLAMBDA = float(configParser.get('Long-Tail-GAN', 'GANLAMBDA'))
 
 model_name = configParser.get('Long-Tail-GAN', 'model_name')
 
-
-dataset = "Askubuntu"
+dataset = sys.argv[1]
 
 train_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BATCH_SIZE, DISPLAY_ITER, LEARNING_RATE, GENERATOR_SAMPLE_TH, total_anneal_steps, anneal_cap, to_restore, model_name, dataset, GANLAMBDA)
