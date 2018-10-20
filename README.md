@@ -25,9 +25,27 @@ For using our framework you will need Python 2.7+ with the following modules ins
 - [bottleneck](https://pypi.org/project/Bottleneck/)
 
 
-## Creating the Input Files
+## Input Files
 
-TODO
+You will need the following files for running our model:
+
+```
+tag_counts.csv:         CSV file containing userId, itemId, and rating (given by user to item) separated by comma (,) 
+item_list.txt:          List of item ids.
+unique_item_id.txt:     Items to use for training and testing (say, only use items rated by atleast 5 users)
+item2id.txt:            Mapping which makes item ids in unique_item_id sequential (0 to num_item), tab-separated
+profile2id.txt:         Mapping which makes user ids sequential (0 to num_user), tab-separated
+niche_items.txt:        Items which are niche (original ids) 
+train_GAN.csv:          CSV file containing pairs of userId (mapped), itemId (mapped) with rating greater than an application-specific threshold
+train_GAN_popular.csv:  userId (mapped), itemId (mapped) pairs of niche items
+train_GAN_niche.csv:    userId (mapped), itemId (mapped) pairs of popular items (unique_items - niche items)
+validation_tr.csv:      Training data for Validation (userId (mapped), itemId (mapped) pairs)
+validation_te.csv:      Test Data for Validation (userId (mapped), itemId (mapped) pairs)
+test_tr.csv:            Training data for Testing (userId (mapped), itemId (mapped) pairs)
+test_te.csv:            Test Data for Testing (userId (mapped), itemId (mapped) pairs)
+```
+
+Sample set of input files for Askubuntu dataset is present in the [Dataset](Dataset/) folder. Refer to the following ipython notebook for details regarding creation of these files for movielens dataset: [ml-parse-vaecf](https://github.com/dawenl/vae_cf/blob/master/VAE_ML20M_WWW2018.ipynb) 
 
 ## Running the Model
 
