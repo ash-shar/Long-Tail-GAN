@@ -1,12 +1,10 @@
 # Long-Tail-GAN
 
-The repository contains training and testing codes for an adversarial learning framework for Neural Collaborative Filtering (NCF) models which aims to enhance long-tail item recommendations. 
+The repository contains training and testing codes for the generative adversarial learning framework for Neural Collaborative Filtering (NCF) models which aims to enhance long-tail item recommendations. 
 
-This model was proposed in the following short paper:
+If this code helps you in your research, please cite the following publication:
 
-> Adit Krishnan, Ashish Sharma, Aravind Sankar, Hari Sundaram, "An Adversarial Approach to Tackle Long-Tail Recommendation in Neural Collaborative Filtering", 
-> 27th ACM International Conference on Information and Knowledge Management (CIKM'18)
-
+> Krishnan, Adit, et al. "An Adversarial Approach to Improve Long-Tail Performance in Neural Collaborative Filtering." Proceedings of the 27th ACM International Conference on Information and Knowledge Management. ACM, 2018.
 ## Getting Started
 
 These instructions will get you a copy of the model up and running on your local machine.
