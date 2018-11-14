@@ -77,5 +77,3 @@ For testing the model, run the following command:
 ```
 $ python2.7 test.py <path/to/saved/folder>
 ```
-
-The mean NDCG, and Recall are reported for the test dataset provided.
