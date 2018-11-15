@@ -124,7 +124,7 @@ def train_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BAT
 
 	generated_tags = tf.placeholder(tf.float32, [None, n_items], name = "generated_tags")
 
-	y_data, y_generated, d_params, x_generated_id, x_popular_n_id, x_popular_g_id, x_niche_id, keep_prob = discriminator(n_items, FEATURE_LEN, h0_size, h1_size, h2_size, h3_size)
+	y_data, y_generated, d_params, x_generated_id, x_popular_n_id, x_popular_g_id, x_niche_id, item_feature_arr, keep_prob = discriminator(n_items, FEATURE_LEN, h0_size, h1_size, h2_size, h3_size)
 
 	zero = tf.constant(0, dtype=tf.float32)
 
