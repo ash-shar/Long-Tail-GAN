@@ -55,4 +55,4 @@ def discriminator(n_items, FEATURE_LEN, h0_size, h1_size, h2_size, h3_size):
 	y_generated = tf.nn.sigmoid(tf.matmul(y_generated, w4) + b4)
 
 
-	return y_data, y_generated, d_params, x_generated_id, x_popular_n_id, x_popular_g_id, x_niche_id
+	return y_data, y_generated, d_params, x_generated_id, x_popular_n_id, x_popular_g_id, x_niche_id, keep_prob
