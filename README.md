@@ -65,7 +65,7 @@ model_name:      Name by which model is saved (Default = "LT_GAN")
 For training the model, run the following command: 
 
 ```
-$ python2.7 train <path/to/input/folder>
+$ python2.7 train.py <path/to/input/folder>
 ```
 
 By default, the model gets saved to **path/to/input/folder/chkpt/** after every epoch.

@@ -167,6 +167,111 @@ def load_overlap_coeff(show2id_path, user_tag_matrix_path):
 	return OVERLAP_COEFFS
 
 
+def load_items_to_sample(user_popular_data, user_niche_data, NICHE_TAGS, OVERLAP_COEFFS, N):
+	USER_TAGS_TO_SAMPLE = {}
+
+	for user_idx in range(N):
+		if user_idx not in user_popular_data or user_idx not in user_niche_data:
+			continue
+
+		curr_pop_vectors = user_popular_data[user_idx]
+		curr_niche_vectors = user_niche_data[user_idx]
+
+		num_niche_tags = len(curr_niche_vectors)
+
+		num_sample_tags = max(2 * len(curr_niche_vectors), 10 - num_niche_tags)
+
+		curr_niche_tags = set()
+
+		curr_sampling_tags = []
+
+		for niche_tag in curr_niche_vectors:
+			niche_tag_idx = niche_tag
+			curr_niche_tags.add(niche_tag_idx)
+			curr_sampling_tags.append(int(niche_tag_idx))
+
+		other_niche_tags = list(NICHE_TAGS - curr_niche_tags)
+
+		other_tags_corr = {}
+
+		for inner_idx in range(len(other_niche_tags)):
+
+			other_tag_idx = other_niche_tags[inner_idx]
+
+			max_coeff = -1.0
+
+			for niche_tag in curr_niche_vectors:
+				niche_tag_idx = niche_tag
+
+				curr_coeff = OVERLAP_COEFFS[niche_tag_idx][other_tag_idx]
+
+				if curr_coeff > max_coeff:
+					max_coeff = curr_coeff
+
+			other_tags_corr[other_tag_idx] = max_coeff
+
+
+		sorted_other_tags = sorted(other_tags_corr.items(), key = lambda x: x[1] , reverse = True)
+
+		for inner_idx in range(min(num_sample_tags, len(sorted_other_tags))):
+			curr_sampling_tags.append(sorted_other_tags[inner_idx][0])
+
+
+		curr_sampling_tags.sort()
+
+		USER_TAGS_TO_SAMPLE[user_idx] = np.asarray(curr_sampling_tags)
+
+	return USER_TAGS_TO_SAMPLE
+
+
+def load_vectors(user_popular_data, user_niche_data, OVERLAP_COEFFS, ITEM_FEATURE_DICT, N):
+
+	user_x_niche_vectors = {}
+	user_x_popular_n_vectors = {}
+
+	for user_idx in range(N):
+		if user_idx not in user_popular_data or user_idx not in user_niche_data:
+			continue
+
+		curr_pop_vectors = user_popular_data[user_idx]
+		curr_niche_vectors = user_niche_data[user_idx]
+
+		curr_x_niche = []
+		curr_x_popular_n = []
+
+		for niche_tag in curr_niche_vectors:
+			niche_tag_idx = niche_tag
+
+			max_coeff = -1.0
+			max_pop_tag_idx = -1
+
+
+			for pop_tag in curr_pop_vectors:
+				pop_tag_idx = pop_tag
+
+				curr_coeff = OVERLAP_COEFFS[niche_tag_idx][pop_tag_idx]
+
+				if curr_coeff > max_coeff:
+					max_coeff = curr_coeff
+					max_pop_tag_idx = pop_tag_idx
+
+			if niche_tag_idx not in ITEM_FEATURE_DICT or max_pop_tag_idx not in ITEM_FEATURE_DICT:
+				# print('Invalid Niche Tag Pair:', niche_tag_idx, max_pop_tag_idx)
+				continue
+
+			curr_x_niche.append(niche_tag_idx)
+			curr_x_popular_n.append(max_pop_tag_idx)
+
+
+		user_x_niche_vectors[user_idx] = curr_x_niche
+
+		user_x_popular_n_vectors[user_idx] = curr_x_popular_n
+
+
+	return user_x_niche_vectors, user_x_popular_n_vectors
+
+
+
 def load_pop_niche_tags(show2id_path, item_list_path, niche_tags_path, n_items):
 	SHOW2ID = {}
 

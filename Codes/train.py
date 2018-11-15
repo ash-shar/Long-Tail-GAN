@@ -15,23 +15,15 @@ import sys
 import pickle
 import ConfigParser
 
-
-from Base_Recommender.MultiVAE import MultiVAE as BaseRecommender
-
-from data_processing import load_train_data, load_tr_te_data, load_user_items, load_overlap_coeff, load_pop_niche_tags
+from data_processing import load_train_data, load_tr_te_data, load_user_items, load_overlap_coeff, load_pop_niche_tags, load_items_to_sample, load_vectors
 from data_processing import load_item_one_hot_features as load_item_features
 
+from generator import generator_VAECF as generator
 
 from sample import sample_from_generator_new
 
+from discriminator import discriminator
 
-def generator_VAECF(p_dims):
-
-	vae = BaseRecommender(p_dims, lam=0.0, random_seed=98765)
-
-	logits_var, loss_var, params = vae.build_graph()
-
-	return vae, logits_var, loss_var, params
 
 def train_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BATCH_SIZE, DISPLAY_ITER, LEARNING_RATE, GENERATOR_SAMPLE_TH, total_anneal_steps, anneal_cap, to_restore, model_name, dataset, GANLAMBDA):
 
@@ -108,110 +100,14 @@ def train_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BAT
 	idxlist = range(N)
 
 
-
-	#changed USER_FEATURES, ITEM_FEATURE_ARR
-	user_x_niche_vectors = {}
-	user_x_popular_n_vectors = {}
-
-	for user_idx in range(N):
-		if user_idx not in user_popular_data or user_idx not in user_niche_data:
-			continue
-
-		curr_pop_vectors = user_popular_data[user_idx]
-		curr_niche_vectors = user_niche_data[user_idx]
-
-		curr_x_niche = []
-		curr_x_popular_n = []
-
-		for niche_tag in curr_niche_vectors:
-			niche_tag_idx = niche_tag
-
-			max_coeff = -1.0
-			max_pop_tag_idx = -1
-
-
-			for pop_tag in curr_pop_vectors:
-				pop_tag_idx = pop_tag
-
-				curr_coeff = OVERLAP_COEFFS[niche_tag_idx][pop_tag_idx]
-
-				if curr_coeff > max_coeff:
-					max_coeff = curr_coeff
-					max_pop_tag_idx = pop_tag_idx
-
-			if niche_tag_idx not in ITEM_FEATURE_DICT or max_pop_tag_idx not in ITEM_FEATURE_DICT:
-				# print('Invalid Niche Tag Pair:', niche_tag_idx, max_pop_tag_idx)
-				continue
-
-			curr_x_niche.append(niche_tag_idx)
-			curr_x_popular_n.append(max_pop_tag_idx)
-
-
-		user_x_niche_vectors[user_idx] = curr_x_niche
-
-		user_x_popular_n_vectors[user_idx] = curr_x_popular_n
-
+	user_x_niche_vectors, user_x_popular_n_vectors = load_vectors(user_popular_data, user_niche_data, OVERLAP_COEFFS, ITEM_FEATURE_DICT, N)
 	print('Vectors Loaded')
-
-	#print(len(user_x_niche_vectors), len(user_x_popular_n_vectors))
-
 
 	
 	print('Loading Items to Sample....', end = '')
-	USER_TAGS_TO_SAMPLE = {}
-
-	for user_idx in range(N):
-		if user_idx not in user_popular_data or user_idx not in user_niche_data:
-			continue
-
-		curr_pop_vectors = user_popular_data[user_idx]
-		curr_niche_vectors = user_niche_data[user_idx]
-
-		num_niche_tags = len(curr_niche_vectors)
-
-		num_sample_tags = max(2 * len(curr_niche_vectors), 10 - num_niche_tags)
-
-		curr_niche_tags = set()
-
-		curr_sampling_tags = []
-
-		for niche_tag in curr_niche_vectors:
-			niche_tag_idx = niche_tag
-			curr_niche_tags.add(niche_tag_idx)
-			curr_sampling_tags.append(int(niche_tag_idx))
-
-		other_niche_tags = list(NICHE_TAGS - curr_niche_tags)
-
-		other_tags_corr = {}
-
-		for inner_idx in range(len(other_niche_tags)):
-
-			other_tag_idx = other_niche_tags[inner_idx]
-
-			max_coeff = -1.0
-
-			for niche_tag in curr_niche_vectors:
-				niche_tag_idx = niche_tag
-
-				curr_coeff = OVERLAP_COEFFS[niche_tag_idx][other_tag_idx]
-
-				if curr_coeff > max_coeff:
-					max_coeff = curr_coeff
-
-			other_tags_corr[other_tag_idx] = max_coeff
-
-
-		sorted_other_tags = sorted(other_tags_corr.items(), key = lambda x: x[1] , reverse = True)
-
-		for inner_idx in range(min(num_sample_tags, len(sorted_other_tags))):
-			curr_sampling_tags.append(sorted_other_tags[inner_idx][0])
-
-
-		curr_sampling_tags.sort()
-
-		USER_TAGS_TO_SAMPLE[user_idx] = np.asarray(curr_sampling_tags)
-
+	USER_TAGS_TO_SAMPLE = load_items_to_sample(user_popular_data, user_niche_data, NICHE_TAGS, OVERLAP_COEFFS, N)
 	print("Done")
+
 
 	N_vad = vad_data_tr.shape[0]
 	idxlist_vad = range(N_vad)
@@ -227,66 +123,13 @@ def train_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BAT
 	tf.reset_default_graph()
 
 	# Generator
-	generator_network, generator_out, g_vae_loss, g_params = generator_VAECF(p_dims)
+	generator_network, generator_out, g_vae_loss, g_params, p_dims = generator(pro_dir)
+
 	generated_tags = tf.placeholder(tf.float32, [None, n_items], name = "generated_tags")
 
-	
-	# Discriminator
-	x_generated_id = tf.placeholder(tf.int32, [None], name = "x_generated")
-	x_popular_n_id = tf.placeholder(tf.int32, [None], name="x_popular_n")
-	x_popular_g_id = tf.placeholder(tf.int32, [None], name="x_popular_g")
-	x_niche_id = tf.placeholder(tf.int32, [None], name="x_niche")
-
-	item_feature_arr = tf.placeholder(tf.float32, [None, FEATURE_LEN], name="item_feature_arr") # num_tags x ...
-
-	keep_prob = tf.placeholder(tf.float32, name="keep_prob") # dropout
-
-	emb_matrix = tf.Variable(tf.truncated_normal([FEATURE_LEN, h0_size], stddev=0.1), name="d_w1", dtype=tf.float32)
-
-	x_generated = tf.nn.embedding_lookup(emb_matrix, x_generated_id) # [None, h0_size]
-	x_popular_n = tf.nn.embedding_lookup(emb_matrix, x_popular_n_id) # [None, h0_size]
-	x_popular_g = tf.nn.embedding_lookup(emb_matrix, x_popular_g_id) # [None, h0_size]
-	x_niche = tf.nn.embedding_lookup(emb_matrix, x_niche_id) # [None, h0_size]
-
-	#Discriminator
-	# Popular Tags
-	w1 = tf.Variable(tf.truncated_normal([h0_size, h1_size], stddev=0.1), name="d_w1", dtype=tf.float32)
-	b1 = tf.Variable(tf.zeros([h1_size]), name="d_b1", dtype=tf.float32)
-	h1 = tf.nn.dropout(tf.nn.tanh(tf.matmul(x_popular_n, w1) + b1), keep_prob)
-
-	# Niche Tags
-	w2 = tf.Variable(tf.truncated_normal([h0_size, h2_size], stddev=0.1), name="d_w2", dtype=tf.float32)
-	b2 = tf.Variable(tf.zeros([h2_size]), name="d_b2", dtype=tf.float32)
-	h2 = tf.nn.dropout(tf.nn.tanh(tf.matmul(x_niche, w2) + b2), keep_prob)
-
-
-	h_in_data = tf.concat([h1, h2], 1)
-
-	# Fully Connected Layer 1
-	w3 = tf.Variable(tf.truncated_normal([h1_size + h2_size, h3_size], stddev=0.1), name="d_w3", dtype=tf.float32)
-	b3 = tf.Variable(tf.zeros([h3_size]), name="d_b3", dtype=tf.float32)
-
-	# Fully Connected Layer 2
-	w4 = tf.Variable(tf.truncated_normal([h3_size, 1], stddev=0.1), name="d_w4", dtype=tf.float32)
-	b4 = tf.Variable(tf.zeros([1]), name="d_b4", dtype=tf.float32)
-
-
-	y_data = tf.nn.dropout(tf.nn.tanh(tf.matmul(h_in_data, w3) + b3), keep_prob)
-	y_data = tf.nn.sigmoid(tf.matmul(y_data, w4) + b4)
-
-	d_params = [w1, b1, w2, b2, w3, b3, w4, b4]
-
-
-	# Generated Tags
-	h3 = tf.nn.dropout(tf.nn.tanh(tf.matmul(x_popular_g, w1) + b1), keep_prob)
-	h4 = tf.nn.dropout(tf.nn.tanh(tf.matmul(x_generated, w2) + b2), keep_prob)
-	h_in_gen = tf.concat([h3, h4], 1)
-	y_generated = tf.nn.dropout(tf.nn.tanh(tf.matmul(h_in_gen, w3) + b3), keep_prob)
-	y_generated = tf.nn.sigmoid(tf.matmul(y_generated, w4) + b4)
-	
+	y_data, y_generated, d_params, x_generated_id, x_popular_n_id, x_popular_g_id, x_niche_id = discriminator(n_items, FEATURE_LEN, h0_size, h1_size, h2_size, h3_size)
 
 	zero = tf.constant(0, dtype=tf.float32)
-
 
 	# Loss Function
 
@@ -344,15 +187,12 @@ def train_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BAT
 			end_idx = min(st_idx + BATCH_SIZE, N)
 			X = train_data[idxlist[st_idx:end_idx]]
 
-			# print(X)
-			
 			if sparse.isspmatrix(X):
 				X = X.toarray()
 			X = X.astype('float32')
 
 			curr_generator_out = sess.run(generator_out, feed_dict = {generator_network.input_ph: X})
 
-			
 
 			curr_x_popular_n = []
 			curr_x_niche = []
@@ -365,7 +205,7 @@ def train_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BAT
 
 			for ii, user_idx in enumerate(idxlist[st_idx:end_idx]):
 				if user_idx + uid_start_idx not in user_popular_data or user_idx + uid_start_idx not in user_niche_data:
-					# print('Invalid User:', user_idx + uid_start_idx)
+					# Invalid User: user_idx + uid_start_idx
 					user_err_cnt += 1
 					total_sampled_tags.append([0]*n_items)
 					continue
@@ -378,8 +218,6 @@ def train_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BAT
 				curr_x_popular_n += user_x_popular_n_vectors[user_idx + uid_start_idx]
 
 
-				# curr_sampled_tags_bin, curr_sampled_tags = sample_from_generator(range(n_items), curr_generator_out[ii], len(curr_niche_vectors), niche_only = sample_process)
-
 				curr_sampled_tags_bin, curr_sampled_tags = sample_from_generator_new(USER_TAGS_TO_SAMPLE[user_idx + uid_start_idx], np.asarray(curr_generator_out)[ii, USER_TAGS_TO_SAMPLE[user_idx + uid_start_idx]], len(curr_niche_vectors), n_items)
 
 				curr_cnt = 0
@@ -388,14 +226,13 @@ def train_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BAT
 				for generated_tag_idx in curr_sampled_tags:
 
 					max_coeff = -1.0
-					# max_pop_tag_idx = -1
 
 					max_pop_tag_idx = np.random.choice(range(len(curr_pop_vectors)))
 
 					max_pop_tag_idx = curr_pop_vectors[max_pop_tag_idx]
 
 					if generated_tag_idx not in ITEM_FEATURE_DICT or max_pop_tag_idx not in ITEM_FEATURE_DICT:
-						# print('Invalid Generated Tag Pair:', generated_tag_idx, max_pop_tag_idx)
+						# Invalid Generated Tag Pair: generated_tag_idx, max_pop_tag_idx
 						curr_sampled_tags_bin[generated_tag_idx] = 0
 						continue
 
