@@ -10,10 +10,13 @@ def generator_VAECF(pro_dir):
 
 	n_items = len(unique_sid)
 
-	p_dims = [200, 600, n_items]
+	p_dims = [200, 600, n_items] # VAECF recommended values
+
+	total_anneal_steps = 20000 # VAECF recommended values
+	anneal_cap = 0.2 # VAECF recommended values
 
 	vae = MultiVAE(p_dims, lam=0.0, random_seed=98765)
 
 	logits_var, loss_var, params = vae.build_graph()
 
-	return vae, logits_var, loss_var, params, p_dims
+	return vae, logits_var, loss_var, params, p_dims, total_anneal_steps, anneal_cap

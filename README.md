@@ -50,7 +50,12 @@ Sample set of input files for Askubuntu dataset is present in the [Dataset](Data
 
 ### Configure
 
-The model can be configured using the file [config.ini](Codes/config.ini) present inside the [Codes](Codes/) folder. The major parameters to be configured are:
+The model can be configured using the file [config.ini](Codes/config.ini) present inside the [Codes](Codes/) folder. The parameters h0_size, h1_size, h2_size, and h3_size are the number of hidden units as defined in the architecture of our discriminator (see figure).
+
+![Architecture](architecture.JPG?raw=true "Title") 
+
+
+The other parameters to be configured are:
 
 ```
 GANLAMBDA:       Weight provided to the Adversary's Loss Term (Default = 1.0)
@@ -60,6 +65,15 @@ LEARNING_RATE:   Learning Rate of the Model (Default = 0.0001)
 model_name:      Name by which model is saved (Default = "LT_GAN")
 ```
 
+### Base Recommender
+
+The repo uses [VAE-CF](https://arxiv.org/abs/1802.05814) as the base recommender (generator in our architecture) by default. You can also provide your own recommender (or other recommenders) as input. Follow the below instructions:
+
+1. Create a python class of your recommender. You can use [VAECF class](Codes/Base_Recommender/MultiVAE.py) as a reference.
+2. Write a wrapper function for your recommender class in the [generator.py](Codes/generator.py) file. The function should take path to the dataset folder as input, irrespective of its usage. Eg., for Askubuntu dataset, it will take path to the [Askubuntu folder](Dataset/Askubuntu) as input. The function should return the following: object to the defined class, probability distribution over the set of items (recommender's output), loss function of the recommender, parameters of the recommender to learn, and hyperparamters used by the recommender. Again, refer the wrapper function of VAE-CF defined in the code.   
+3. In the [train.py](Codes/train.py) file, import the wrapper function of your recommender instead of generator_VAECF (line 21).
+4. If the set of hyperparameters of your recommender are similar to VAE-CF, then no more change would be needed. Otherwise, you might need to take care of them in the code, especially if some of them are updated over training iterations (like annealing). 
+
 ### Train
 
 For training the model, run the following command: 
@@ -68,7 +82,7 @@ For training the model, run the following command:
 $ python2.7 train.py <path/to/input/folder>
 ```
 
-By default, the model gets saved to **path/to/input/folder/chkpt/** after every epoch.
+The code will automatically take the config file as input. By default, the model gets saved to **path/to/input/folder/chkpt/** after every epoch.
 
 ### Test
 

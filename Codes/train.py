@@ -24,8 +24,10 @@ from sample import sample_from_generator_new
 
 from discriminator import discriminator
 
+from test import NDCG_binary_at_k_batch, Recall_at_k_batch
 
-def train_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BATCH_SIZE, DISPLAY_ITER, LEARNING_RATE, GENERATOR_SAMPLE_TH, total_anneal_steps, anneal_cap, to_restore, model_name, dataset, GANLAMBDA):
+
+def train_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BATCH_SIZE, DISPLAY_ITER, LEARNING_RATE, total_anneal_steps, anneal_cap, to_restore, model_name, dataset, GANLAMBDA):
 
 
 	DATA_DIR = '../Dataset/'+dataset+'/'
@@ -120,7 +122,7 @@ def train_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BAT
 	tf.reset_default_graph()
 
 	# Generator
-	generator_network, generator_out, g_vae_loss, g_params, p_dims = generator(pro_dir)
+	generator_network, generator_out, g_vae_loss, g_params, p_dims, total_anneal_steps, anneal_cap = generator(pro_dir)
 
 	generated_tags = tf.placeholder(tf.float32, [None, n_items], name = "generated_tags")
 
@@ -357,12 +359,11 @@ h2_size = int(configParser.get('Long-Tail-GAN', 'h2_size'))
 h3_size = int(configParser.get('Long-Tail-GAN', 'h3_size'))
 
 NUM_EPOCH = int(configParser.get('Long-Tail-GAN', 'NUM_EPOCH'))
-NUM_SUB_EPOCHS = int(configParser.get('Long-Tail-GAN', 'NUM_SUB_EPOCHS'))
+NUM_SUB_EPOCHS = int(NUM_EPOCH/8)
 BATCH_SIZE = int(configParser.get('Long-Tail-GAN', 'BATCH_SIZE'))
 
 DISPLAY_ITER = int(configParser.get('Long-Tail-GAN', 'DISPLAY_ITER'))
 LEARNING_RATE = float(configParser.get('Long-Tail-GAN', 'LEARNING_RATE'))
-GENERATOR_SAMPLE_TH = float(configParser.get('Long-Tail-GAN', 'GENERATOR_SAMPLE_TH'))
 total_anneal_steps = int(configParser.get('Long-Tail-GAN', 'total_anneal_steps'))
 anneal_cap = float(configParser.get('Long-Tail-GAN', 'anneal_cap'))
 to_restore = int(configParser.get('Long-Tail-GAN', 'to_restore'))
@@ -372,4 +373,4 @@ model_name = configParser.get('Long-Tail-GAN', 'model_name')
 
 dataset = sys.argv[1]
 
-train_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BATCH_SIZE, DISPLAY_ITER, LEARNING_RATE, GENERATOR_SAMPLE_TH, total_anneal_steps, anneal_cap, to_restore, model_name, dataset, GANLAMBDA)
+train_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BATCH_SIZE, DISPLAY_ITER, LEARNING_RATE, total_anneal_steps, anneal_cap, to_restore, model_name, dataset, GANLAMBDA)
