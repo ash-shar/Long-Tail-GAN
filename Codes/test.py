@@ -21,6 +21,11 @@ from Base_Recommender.MultiVAE import MultiVAE as BaseRecommender
 from data_processing import load_tr_te_data, load_pop_niche_tags
 from data_processing import load_item_one_hot_features as load_item_features
 
+from generator import generator_VAECF as generator
+
+from discriminator import discriminator
+
+from eval_functions import NDCG_binary_at_k_batch, Recall_at_k_batch
 
 def generator_VAECF(p_dims):
 
@@ -31,63 +36,8 @@ def generator_VAECF(p_dims):
 	return vae, logits_var, loss_var, params
 
 
-def NDCG_binary_at_k_batch(X_pred, heldout_batch, k=100):
-	'''
-	normalized discounted cumulative gain@k for binary relevance
-	ASSUMPTIONS: all the 0's in heldout_data indicate 0 relevance
-	'''
-	batch_users = X_pred.shape[0]
-	idx_topk_part = bn.argpartition(-X_pred, k, axis=1)
-	topk_part = X_pred[np.arange(batch_users)[:, np.newaxis],
-					   idx_topk_part[:, :k]]
-	idx_part = np.argsort(-topk_part, axis=1)
 
-	# topk predicted score
-	idx_topk = idx_topk_part[np.arange(batch_users)[:, np.newaxis], idx_part]
-	# build the discount template
-	tp = 1. / np.log2(np.arange(2, k + 2))
-
-	DCG = (heldout_batch[np.arange(batch_users)[:, np.newaxis],
-						 idx_topk].toarray() * tp).sum(axis=1)
-	IDCG = np.array([(tp[:min(n, k)]).sum()
-					 for n in heldout_batch.getnnz(axis=1)])
-
-	output = []
-
-	for idx in range(np.shape(DCG)[0]):
-		if IDCG[idx] != 0:
-			output.append(DCG[idx]/IDCG[idx])
-
-	return output
-
-def Recall_at_k_batch(X_pred, heldout_batch, k=100):
-	batch_users = X_pred.shape[0]
-
-	idx = bn.argpartition(-X_pred, k, axis=1)
-	X_pred_binary = np.zeros_like(X_pred, dtype=bool)
-	X_pred_binary[np.arange(batch_users)[:, np.newaxis], idx[:, :k]] = True
-
-	X_true_binary = (heldout_batch > 0).toarray()
-
-	tmp = (np.logical_and(X_true_binary, X_pred_binary).sum(axis=1)).astype(
-		np.float32)
-
-	denom = np.minimum(k, X_true_binary.sum(axis=1))
-
-	output = []
-
-	misclassified_tags = []
-
-	for idx in range(np.shape(tmp)[0]):
-		if denom[idx] != 0:
-			output.append(tmp[idx]/denom[idx])
-
-	return output, misclassified_tags
-
-
-
-
-def test_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BATCH_SIZE, DISPLAY_ITER, LEARNING_RATE, GENERATOR_SAMPLE_TH, total_anneal_steps, anneal_cap, to_restore, model_name, dataset, GANLAMBDA, output_path):
+def test_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BATCH_SIZE, DISPLAY_ITER, LEARNING_RATE, to_restore, model_name, dataset, GANLAMBDA, output_path):
 
 
 	DATA_DIR = '../Dataset/'+dataset+'/'
@@ -96,11 +46,6 @@ def test_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BATC
 	niche_tags_path = DATA_DIR + "niche_items.txt"
 
 	user_tag_matrix_path = DATA_DIR + "tag_counts.csv"
-
-	# output_path = "chkpt/"+dataset+"_"+model_name+"_"+str(GANLAMBDA)+"/"
-
-	# if not os.path.exists(output_path):
-	# 	os.makedirs(output_path)
 
 
 	item_list_path = DATA_DIR + 'item_list.txt'
@@ -114,8 +59,6 @@ def test_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BATC
 			unique_sid.append(line.strip())
 
 	n_items = len(unique_sid)
-
-	p_dims = [200, 600, n_items]
 
 
 
@@ -142,64 +85,14 @@ def test_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BATC
 
 	batch_size_test = 20000
 
-
 	# Generator
-	generator_network, generator_out, g_vae_loss, g_params = generator_VAECF(p_dims)
+	generator_network, generator_out, g_vae_loss, g_params, p_dims, total_anneal_steps, anneal_cap = generator(pro_dir)
+
 	generated_tags = tf.placeholder(tf.float32, [None, n_items], name = "generated_tags")
 
-	
+
 	# Discriminator
-	x_generated_id = tf.placeholder(tf.int32, [None], name = "x_generated")
-	x_popular_n_id = tf.placeholder(tf.int32, [None], name="x_popular_n")
-	x_popular_g_id = tf.placeholder(tf.int32, [None], name="x_popular_g")
-	x_niche_id = tf.placeholder(tf.int32, [None], name="x_niche")
-
-	item_feature_arr = tf.placeholder(tf.float32, [None, FEATURE_LEN], name="item_feature_arr") # num_tags x ...
-
-	keep_prob = tf.placeholder(tf.float32, name="keep_prob") # dropout
-
-	emb_matrix = tf.Variable(tf.truncated_normal([FEATURE_LEN, h0_size], stddev=0.1), name="d_w1", dtype=tf.float32)
-
-	x_generated = tf.nn.embedding_lookup(emb_matrix, x_generated_id) # [None, h0_size]
-	x_popular_n = tf.nn.embedding_lookup(emb_matrix, x_popular_n_id) # [None, h0_size]
-	x_popular_g = tf.nn.embedding_lookup(emb_matrix, x_popular_g_id) # [None, h0_size]
-	x_niche = tf.nn.embedding_lookup(emb_matrix, x_niche_id) # [None, h0_size]
-
-	#Discriminator
-	# Popular Tags
-	w1 = tf.Variable(tf.truncated_normal([h0_size, h1_size], stddev=0.1), name="d_w1", dtype=tf.float32)
-	b1 = tf.Variable(tf.zeros([h1_size]), name="d_b1", dtype=tf.float32)
-	h1 = tf.nn.dropout(tf.nn.tanh(tf.matmul(x_popular_n, w1) + b1), keep_prob)
-
-	# Niche Tags
-	w2 = tf.Variable(tf.truncated_normal([h0_size, h2_size], stddev=0.1), name="d_w2", dtype=tf.float32)
-	b2 = tf.Variable(tf.zeros([h2_size]), name="d_b2", dtype=tf.float32)
-	h2 = tf.nn.dropout(tf.nn.tanh(tf.matmul(x_niche, w2) + b2), keep_prob)
-
-
-	h_in_data = tf.concat([h1, h2], 1)
-
-	# Fully Connected Layer 1
-	w3 = tf.Variable(tf.truncated_normal([h1_size + h2_size, h3_size], stddev=0.1), name="d_w3", dtype=tf.float32)
-	b3 = tf.Variable(tf.zeros([h3_size]), name="d_b3", dtype=tf.float32)
-
-	# Fully Connected Layer 2
-	w4 = tf.Variable(tf.truncated_normal([h3_size, 1], stddev=0.1), name="d_w4", dtype=tf.float32)
-	b4 = tf.Variable(tf.zeros([1]), name="d_b4", dtype=tf.float32)
-
-
-	y_data = tf.nn.dropout(tf.nn.tanh(tf.matmul(h_in_data, w3) + b3), keep_prob)
-	y_data = tf.nn.sigmoid(tf.matmul(y_data, w4) + b4)
-
-	d_params = [w1, b1, w2, b2, w3, b3, w4, b4]
-
-
-	# Generated Tags
-	h3 = tf.nn.dropout(tf.nn.tanh(tf.matmul(x_popular_g, w1) + b1), keep_prob)
-	h4 = tf.nn.dropout(tf.nn.tanh(tf.matmul(x_generated, w2) + b2), keep_prob)
-	h_in_gen = tf.concat([h3, h4], 1)
-	y_generated = tf.nn.dropout(tf.nn.tanh(tf.matmul(h_in_gen, w3) + b3), keep_prob)
-	y_generated = tf.nn.sigmoid(tf.matmul(y_generated, w4) + b4)
+	y_data, y_generated, d_params, x_generated_id, x_popular_n_id, x_popular_g_id, x_niche_id, item_feature_arr, keep_prob = discriminator(n_items, FEATURE_LEN, h0_size, h1_size, h2_size, h3_size)
 	
 
 	zero = tf.constant(0, dtype=tf.float32)
@@ -286,12 +179,6 @@ def test_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BATC
 				curr_user_li.append(user_idx+uid_start_idx)
 
 			user_li.append(curr_user_li)
-		
-
-	# for idx, elem in enumerate(n100_list):
-	# 	for inner_idx, inner_elem in enumerate(elem):
-	# 		print(str(user_li[idx][inner_idx])+'\t'+str(n100_list[idx][inner_idx])+'\t'+str(r20_list[idx][inner_idx])+'\t'+str(r50_list[idx][inner_idx])+'\t'+str(not_found_20_list[idx][inner_idx])+'\t'+str(not_found_50_list[idx][inner_idx]))
-
 
 	print(str(np.mean(n100_list)) + '\t' + str(np.mean(r20_list)) + '\t' + str(np.mean(r50_list)))
 
@@ -307,21 +194,19 @@ h2_size = int(configParser.get('Long-Tail-GAN', 'h2_size'))
 h3_size = int(configParser.get('Long-Tail-GAN', 'h3_size'))
 
 NUM_EPOCH = int(configParser.get('Long-Tail-GAN', 'NUM_EPOCH'))
-NUM_SUB_EPOCHS = int(configParser.get('Long-Tail-GAN', 'NUM_SUB_EPOCHS'))
+NUM_SUB_EPOCHS = int(NUM_EPOCH/8)
 BATCH_SIZE = int(configParser.get('Long-Tail-GAN', 'BATCH_SIZE'))
 
 DISPLAY_ITER = int(configParser.get('Long-Tail-GAN', 'DISPLAY_ITER'))
 LEARNING_RATE = float(configParser.get('Long-Tail-GAN', 'LEARNING_RATE'))
-GENERATOR_SAMPLE_TH = float(configParser.get('Long-Tail-GAN', 'GENERATOR_SAMPLE_TH'))
-total_anneal_steps = int(configParser.get('Long-Tail-GAN', 'total_anneal_steps'))
-anneal_cap = float(configParser.get('Long-Tail-GAN', 'anneal_cap'))
 to_restore = int(configParser.get('Long-Tail-GAN', 'to_restore'))
 GANLAMBDA = float(configParser.get('Long-Tail-GAN', 'GANLAMBDA'))
 
 model_name = configParser.get('Long-Tail-GAN', 'model_name')
 
 
-output_path = sys.argv[1]
+dataset = sys.argv[1]
+output_path = sys.argv[2]
 
 
-test_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BATCH_SIZE, DISPLAY_ITER, LEARNING_RATE, GENERATOR_SAMPLE_TH, total_anneal_steps, anneal_cap, to_restore, model_name, dataset, GANLAMBDA, output_path)
+test_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BATCH_SIZE, DISPLAY_ITER, LEARNING_RATE, to_restore, model_name, dataset, GANLAMBDA, output_path)

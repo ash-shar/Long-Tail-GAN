@@ -24,10 +24,10 @@ from sample import sample_from_generator_new
 
 from discriminator import discriminator
 
-from test import NDCG_binary_at_k_batch, Recall_at_k_batch
+from eval_functions import NDCG_binary_at_k_batch, Recall_at_k_batch
 
 
-def train_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BATCH_SIZE, DISPLAY_ITER, LEARNING_RATE, total_anneal_steps, anneal_cap, to_restore, model_name, dataset, GANLAMBDA):
+def train_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BATCH_SIZE, DISPLAY_ITER, LEARNING_RATE, to_restore, model_name, dataset, GANLAMBDA):
 
 
 	DATA_DIR = '../Dataset/'+dataset+'/'
@@ -126,6 +126,8 @@ def train_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BAT
 
 	generated_tags = tf.placeholder(tf.float32, [None, n_items], name = "generated_tags")
 
+
+	# Discriminator
 	y_data, y_generated, d_params, x_generated_id, x_popular_n_id, x_popular_g_id, x_niche_id, item_feature_arr, keep_prob = discriminator(n_items, FEATURE_LEN, h0_size, h1_size, h2_size, h3_size)
 
 	zero = tf.constant(0, dtype=tf.float32)
@@ -364,8 +366,6 @@ BATCH_SIZE = int(configParser.get('Long-Tail-GAN', 'BATCH_SIZE'))
 
 DISPLAY_ITER = int(configParser.get('Long-Tail-GAN', 'DISPLAY_ITER'))
 LEARNING_RATE = float(configParser.get('Long-Tail-GAN', 'LEARNING_RATE'))
-total_anneal_steps = int(configParser.get('Long-Tail-GAN', 'total_anneal_steps'))
-anneal_cap = float(configParser.get('Long-Tail-GAN', 'anneal_cap'))
 to_restore = int(configParser.get('Long-Tail-GAN', 'to_restore'))
 GANLAMBDA = float(configParser.get('Long-Tail-GAN', 'GANLAMBDA'))
 
@@ -373,4 +373,4 @@ model_name = configParser.get('Long-Tail-GAN', 'model_name')
 
 dataset = sys.argv[1]
 
-train_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BATCH_SIZE, DISPLAY_ITER, LEARNING_RATE, total_anneal_steps, anneal_cap, to_restore, model_name, dataset, GANLAMBDA)
+train_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BATCH_SIZE, DISPLAY_ITER, LEARNING_RATE, to_restore, model_name, dataset, GANLAMBDA)
