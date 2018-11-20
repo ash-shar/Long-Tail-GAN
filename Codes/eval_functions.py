@@ -6,7 +6,7 @@ import codecs
 import psutil
 from scipy import sparse
 import pandas as pd
-
+import bottleneck as bn
 
 def NDCG_binary_at_k_batch(X_pred, heldout_batch, k=100):
 	'''

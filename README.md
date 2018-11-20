@@ -89,5 +89,7 @@ The code will automatically take the config file as input. By default, the model
 For testing the model, run the following command:
 
 ```
-$ python2.7 test.py <path/to/saved/folder>
+$ python2.7 test.py <path/to/input/folder> <path/to/saved/model>
 ```
+
+where Path to saved model is the path to the saved model file inside chkpt folder (will normally be model_<last_epoch>) 

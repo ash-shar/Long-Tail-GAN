@@ -27,20 +27,10 @@ from discriminator import discriminator
 
 from eval_functions import NDCG_binary_at_k_batch, Recall_at_k_batch
 
-def generator_VAECF(p_dims):
-
-	vae = BaseRecommender(p_dims, lam=0.0, random_seed=98765)
-
-	logits_var, loss_var, params = vae.build_graph()
-
-	return vae, logits_var, loss_var, params
-
-
-
 def test_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BATCH_SIZE, DISPLAY_ITER, LEARNING_RATE, to_restore, model_name, dataset, GANLAMBDA, output_path):
 
 
-	DATA_DIR = '../Dataset/'+dataset+'/'
+	DATA_DIR = dataset+'/'
 
 	show2id_path = DATA_DIR + "item2id.txt"
 	niche_tags_path = DATA_DIR + "niche_items.txt"
