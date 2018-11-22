@@ -1,17 +1,17 @@
 # Long-Tail-GAN
 
-The repository contains training and testing codes for the generative adversarial learning framework for Neural Collaborative Filtering (NCF) models which aims to enhance long-tail item recommendations. 
+This repository contains the training and testing codes for the Generative Adversarial learning framework for Neural Collaborative Filtering (NCF) models, which aims to enhance long-tail item recommendations. 
 
 If this code helps you in your research, please cite the following publication:
 
 > Krishnan, Adit, et al. "An Adversarial Approach to Improve Long-Tail Performance in Neural Collaborative Filtering." Proceedings of the 27th ACM International Conference on Information and Knowledge Management. ACM, 2018.
 ## Getting Started
 
-These instructions will get you a copy of the model up and running on your local machine.
+These instructions will help you setup the proposed model on your local machine.
 
 ### Platforms Supported
 
-- Unix-Like
+- Unix, MacOS, Windows (with appropriate Python and Tensorflow environment)
 
 ### Prerequisites
 
@@ -21,6 +21,8 @@ For using our framework you will need Python 2.7+ with the following modules ins
 - [scipy](https://www.scipy.org/)
 - [pandas](https://pandas.pydata.org/)
 - [bottleneck](https://pypi.org/project/Bottleneck/)
+
+These requirements may be satisified with an updated Anaconda environment as well - https://www.anaconda.com/
 
 
 ## Input Files
@@ -50,7 +52,7 @@ Sample set of input files for Askubuntu dataset is present in the [Dataset](Data
 
 ### Configure
 
-The model can be configured using the file [config.ini](Codes/config.ini) present inside the [Codes](Codes/) folder. The parameters h0_size, h1_size, h2_size, and h3_size are the number of hidden units as defined in the architecture of our discriminator (see figure).
+The model can be configured using the file [config.ini](Codes/config.ini) present inside the [Codes](Codes/) folder. The parameters h0_size, h1_size, h2_size, and h3_size are the sizes of the hidden layers as defined in the architecture of our discriminator in the GAN framework (see figure).
 
 ![Architecture](architecture.JPG?raw=true "Title") 
 
@@ -67,9 +69,9 @@ model_name:      Name by which model is saved (Default = "LT_GAN")
 
 ### Base Recommender
 
-The repo uses [VAE-CF](https://arxiv.org/abs/1802.05814) as the base recommender (generator in our architecture) by default. You can also provide your own recommender (or other recommenders) as input. Follow the below instructions:
+The repo uses [VAE-CF](https://arxiv.org/abs/1802.05814) as the base recommender (generator in our architecture) by default. You can also replace this with your own recommender models (or other recommenders) to be trained with the GAN loss and long-tail strategy proposed by us. Follow the below instructions:
 
-1. Create a python class of your recommender. You can use [VAECF class](Codes/Base_Recommender/MultiVAE.py) as a reference.
+1. Create a python class of your recommender. You can use the [VAECF class](Codes/Base_Recommender/MultiVAE.py) as a template.
 2. Write a wrapper function for your recommender class in the [generator.py](Codes/generator.py) file. The function should take path to the dataset folder as input, irrespective of its usage. Eg., for Askubuntu dataset, it will take path to the [Askubuntu folder](Dataset/Askubuntu) as input. The function should return the following: object to the defined class, probability distribution over the set of items (recommender's output), loss function of the recommender, parameters of the recommender to learn, and hyperparamters used by the recommender. Again, refer the wrapper function of VAE-CF defined in the code.   
 3. In the [train.py](Codes/train.py) file, import the wrapper function of your recommender instead of generator_VAECF (line 21).
 4. If the set of hyperparameters of your recommender are similar to VAE-CF, then no more change would be needed. Otherwise, you might need to take care of them in the code, especially if some of them are updated over training iterations (like annealing). 
@@ -82,7 +84,7 @@ For training the model, run the following command:
 $ python2.7 train.py <path/to/input/folder>
 ```
 
-The code will automatically take the config file as input. By default, the model gets saved to **path/to/input/folder/chkpt/** after every epoch.
+Model parameters are set to the values provided in the config file. By default, the trained model is checkpointed and saved to **path/to/input/folder/chkpt/** after every epoch.
 
 ### Test
 
@@ -92,4 +94,4 @@ For testing the model, run the following command:
 $ python2.7 test.py <path/to/input/folder> <path/to/saved/model>
 ```
 
-where Path to saved model is the path to the saved model file inside chkpt folder (will normally be model_<last_epoch>) 
+where Path to saved model is the path to the saved model file inside chkpt folder (will be model_<last_epoch> by default).
