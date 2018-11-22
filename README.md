@@ -15,7 +15,7 @@ These instructions will help you setup the proposed model on your local machine.
 
 ### Prerequisites
 
-For using our framework you will need Python 2.7+ with the following modules installed:
+Our framework can be compiled on Python 2.7+ environments with the following modules installed:
 - [tensorflow](https://www.tensorflow.org/)
 - [numpy](http://www.numpy.org/)
 - [scipy](https://www.scipy.org/)
