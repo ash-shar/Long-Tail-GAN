@@ -45,7 +45,7 @@ test_tr.csv:            Training data for Testing (userId (mapped), itemId (mapp
 test_te.csv:            Test Data for Testing (userId (mapped), itemId (mapped) pairs)
 ```
 
-A set of input files for a sampled version of Askubuntu dataset are present in the [Dataset](Dataset/) folder. Note that we use the set of tags assigned to the posts of a user as items; the posts correspond to the questions asked by the user, the answers given by the user, the posts liked by the user, and the post to which the user commented.
+A set of input files for a sampled version of Askubuntu dataset are present in the [Dataset](Dataset/) folder. Note that we use the set of tags assigned to the posts of a user as items; the posts correspond to the questions asked by the user, the answers given by the user, the posts liked by the user, and the posts to which the user commented.
 
 Refer to the following ipython notebook for details regarding creation of these files for movielens dataset: [ml-parse-vaecf](https://github.com/dawenl/vae_cf/blob/master/VAE_ML20M_WWW2018.ipynb). The movies rated by the users are the items.
 
