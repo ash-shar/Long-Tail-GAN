@@ -37,7 +37,12 @@ def train_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BAT
 
 	user_tag_matrix_path = DATA_DIR + "item_counts.csv"
 
-	output_path = "chkpt/"+dataset+"_"+model_name+"_"+str(GANLAMBDA)+"/"
+	dataset_name = dataset.split('/')[-1].strip()
+
+	if dataset_name == '':
+		dataset_name = dataset.split('/')[-2].strip()
+
+	output_path = "chkpt/"+dataset_name+"_"+model_name+"_"+str(GANLAMBDA)+"/"
 
 	if not os.path.exists(output_path):
 		os.makedirs(output_path)
