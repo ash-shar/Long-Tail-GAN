@@ -30,7 +30,7 @@ These requirements may be satisified with an updated Anaconda environment as wel
 You will need the following files for running our model:
 
 ```
-tag_counts.csv:         CSV file containing userId, itemId, and rating (given by user to item) separated by comma (,) 
+item_counts.csv:         CSV file containing userId, itemId, and rating (given by user to item) separated by comma (,) 
 item_list.txt:          List of item ids.
 unique_item_id.txt:     Items to use for training and testing (say, only use items rated by atleast 5 users)
 item2id.txt:            Mapping which makes item ids in unique_item_id sequential (0 to num_item), tab-separated
@@ -45,7 +45,9 @@ test_tr.csv:            Training data for Testing (userId (mapped), itemId (mapp
 test_te.csv:            Test Data for Testing (userId (mapped), itemId (mapped) pairs)
 ```
 
-Sample set of input files for Askubuntu dataset is present in the [Dataset](Dataset/) folder. Refer to the following ipython notebook for details regarding creation of these files for movielens dataset: [ml-parse-vaecf](https://github.com/dawenl/vae_cf/blob/master/VAE_ML20M_WWW2018.ipynb) 
+Sample set of input files for Askubuntu dataset is present in the [Dataset](Dataset/) folder. Note that we use the set of tags assigned to the posts of a user as items; the posts correspond to the questions asked by the user, the answers given by the user, the posts liked by the user, or the post to which the user commented.
+
+Refer to the following ipython notebook for details regarding creation of these files for movielens dataset: [ml-parse-vaecf](https://github.com/dawenl/vae_cf/blob/master/VAE_ML20M_WWW2018.ipynb). The movies rated by the users are the items.
 
 ## Running the Model
 

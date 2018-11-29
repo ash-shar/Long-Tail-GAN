@@ -35,7 +35,7 @@ def test_GAN(h0_size, h1_size, h2_size, h3_size, NUM_EPOCH, NUM_SUB_EPOCHS, BATC
 	show2id_path = DATA_DIR + "item2id.txt"
 	niche_tags_path = DATA_DIR + "niche_items.txt"
 
-	user_tag_matrix_path = DATA_DIR + "tag_counts.csv"
+	user_tag_matrix_path = DATA_DIR + "item_counts.csv"
 
 
 	item_list_path = DATA_DIR + 'item_list.txt'
